@@ -29,7 +29,8 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => { // can get Express routing syntax highlighter
-  const templateVars = { 
+  console.log(req.params);
+  const templateVars = {
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL]
   };
