@@ -10,7 +10,6 @@ function generateRandomString() {
   }
   return randomString;
 }
-console.log(generateRandomString());
 
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -27,8 +26,10 @@ app.listen(PORT, () => {
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
+  let { longURL } = req.body;
+  let shortURL = generateRandomString();                   
+  urlDatabase[shortURL] = longURL; // note this is not putting "" around keys
+  res.redirect(302, `/urls/${shortURL}`);
 });
 
 app.get("/", (req, res) => {
@@ -48,6 +49,12 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
+
+app.get("/u/:shortURL", (req, res) => {
+  const longURL = urlDatabase[req.params.shortURL];
+  res.redirect(302, `${longURL}`);
+});
+  
 
 app.get("/urls/:id", (req, res) => { // can get Express routing syntax highlighter
   const templateVars = {
