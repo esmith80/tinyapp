@@ -25,7 +25,15 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
-app.post("/urls", (req, res) => {
+app.post("/urls/:shortURL/delete", (req, res) => {
+  console.log(req.params);
+  const shortURL = req.params.shortURL;
+  delete urlDatabase[shortURL];
+  console.log(urlDatabase);
+  res.redirect("/urls");
+}); 
+
+app.post("/urls", (req, res) => {  
   let { longURL } = req.body;
   let shortURL = generateRandomString();                   
   urlDatabase[shortURL] = longURL; // note this is not putting "" around keys
@@ -53,8 +61,8 @@ app.get("/urls/new", (req, res) => {
 app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL];
   res.redirect(302, `${longURL}`);
-});
-  
+});  
+
 
 app.get("/urls/:id", (req, res) => { // can get Express routing syntax highlighter
   const templateVars = {
