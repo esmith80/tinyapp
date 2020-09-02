@@ -1,6 +1,11 @@
 const express = require("express");
 const app = express();
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
 const PORT = 8080; // default port 8080
+const bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({extended: true}));
+app.set('view engine', 'ejs');
 
 function generateRandomString() {
   randomString = "";
@@ -10,12 +15,7 @@ function generateRandomString() {
   }
   return randomString;
 }
-
-const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({extended: true}));
-
-app.set('view engine', 'ejs');
-
+// URL Database (editable by users of site)
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
@@ -23,6 +23,18 @@ const urlDatabase = {
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
+});
+
+// --------- POST Request Handlers ---------
+
+app.post("/login", (req, res) => {
+  res.cookie('username', req.body.username);
+  res.redirect("/urls");
+});
+
+app.post("/logout", (req, res) => {
+  res.clearCookie('username');
+  res.redirect("/urls");
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -40,35 +52,60 @@ app.post("/urls", (req, res) => {
   let { longURL } = req.body;
   let shortURL = generateRandomString();                   
   urlDatabase[shortURL] = longURL; // note this is not putting "" around keys
-  res.redirect(302, `/urls/${shortURL}`);
+  res.redirect(`/urls/${shortURL}`);
 });
 
-
-
+// --------- GET Request Handlers ---------
 
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
-
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-
-
 //http://localhost:8080/urls
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = {
+    urls: urlDatabase,
+    username: req.cookies["username"]
+  };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const templateVars = {
+    urls: urlDatabase,
+    username: req.cookies["username"]
+  };
+  res.render("urls_new", templateVars);
+});
+
+  app.get("/u/:shortURL", (req, res) => {
+    const templateVars = {
+      urls: urlDatabase,
+      username: req.cookies["username"]
+    };
+  const longURL = urlDatabase[req.params.shortURL];
+  res.redirect(302, `${longURL}`);
+});  
+
+
+app.get("/urls/:id", (req, res) => { // can get Express routing syntax highlighter
+  const templateVars = {
+    shortURL: req.params.id,
+    longURL: urlDatabase[req.params.id],
+    username: req.cookies["username"]
+  };
+  res.render("urls_show", templateVars);
+});
+
+app.get("/hello", (req, res) => {
+  res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
 //app.get("/u/:shortURL/:rohitid")
-app.get("/u/:shortURL", (req, res) => {
 //1. we always use req.params if we are going to access the variable from the route
 // it means that in the above example, I can access it with 
 // req.params.shortURL
@@ -78,19 +115,3 @@ app.get("/u/:shortURL", (req, res) => {
   // req.params
   // let temp = {id: req.params.shortURL};
   // res.render("rohit_view",temp);
-  const longURL = urlDatabase[req.params.shortURL];
-  res.redirect(302, `${longURL}`);
-});  
-
-
-app.get("/urls/:id", (req, res) => { // can get Express routing syntax highlighter
-  const templateVars = {
-    shortURL: req.params.id,
-    longURL: urlDatabase[req.params.id]
-};
-  res.render("urls_show", templateVars);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
