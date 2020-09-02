@@ -1,4 +1,6 @@
 const express = require("express");
+const morgan = require("morgan");
+const bodyParser = require("body-parser");
 const app = express();
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
@@ -15,11 +17,14 @@ function generateRandomString() {
   }
   return randomString;
 }
-// URL Database (editable by users of site)
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(morgan('dev'));
+app.set('view engine', 'ejs');
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
