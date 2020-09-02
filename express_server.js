@@ -14,6 +14,20 @@ function generateRandomString() {
   }
   return randomString;
 }
+
+const users = { 
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "dishwasher-funk"
+  }
+}
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
@@ -58,7 +72,29 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
+app.post("/register", (req, res) => {
+  const userID = generateRandomString();
+  const user = {
+    id:       userID,
+    email:    req.body.email,
+    password: req.body.password
+  }
+  users[userID] = user;
+  res.cookie('user_id', userID);
+  res.redirect("/urls");
+  console.log(users);
+});
+
 // --------- GET Request Handlers ---------
+
+app.get("/register", (req, res) => {
+  const templateVars = {
+    urls: urlDatabase,
+    username: req.cookies["username"]
+  };
+  res.render('register', templateVars);
+});
+
 
 app.get("/", (req, res) => {
   res.send("Hello!");
