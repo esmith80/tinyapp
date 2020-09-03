@@ -18,10 +18,10 @@
   </div>
   <h2>Edit this URL...</h2>
   <!-- <form action="/urls/update"></form> ROHIT'S CODE -->
-  <form action="/urls/<%= shortURL %>/edit" method="POST">
+  <form class="form-inline" action="/urls/<%= shortURL %>/edit" method="POST">
     <label>New URL: </label>
-      <input type="text" placeholder="http://" name="newLongURL">
-      <input type="hidden" value="<%= shortURL %>" name="shortURL">
+      <input type="url" value="http://" name="newLongURL">
+      <input type="hidden" value="<%= shortURL %>" name="shortURL"> <!-- i submitted this shortURL because the new longURL will not know where to be put in database, it needs the key-->
     <input type="submit" value="Submit">
   </form>
   <!-- Bootstrap JS -->

@@ -2,7 +2,6 @@ const express = require("express");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
 const cookieParser = require('cookie-parser');
-
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -18,15 +17,38 @@ const users = {
     id: "user2RandomID", 
     email: "user2@example.com", 
     password: "dishwasher-funk"
+  },
+  "a": {
+    id: "a", 
+    email: "a@a.com", 
+    password: "a"
   }
 }
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "userRandomID" },
+  "9sm5xK": { longURL: "http://www.google.com", userID: "userRandomID" },
+  "2fx9f3": { longURL: "http://www.musicsmith.ca", userID: "user2RandomID" },
+  "weBJvX": { longURL: "http://www.yahoo.ca", userID: "a"},
+  "g@n0nD": { longURL: "http://www.zeldauniverse.net.", userID: "a"}
 };
 
 //----------Helper Functions-----------
+
+// returns an array of objects (filtered urls the user is allowed to access; their ID is associated with the url record in the master
+
+function urlsForUser(id) {
+  let filteredUrls = [];
+  for (const url in urlDatabase) {
+    if (urlDatabase[url].userID === id) {
+      filteredUrls.push( {
+        shortCut: url,
+        longURL: urlDatabase[url].longURL,
+      });
+    }
+  }
+  return filteredUrls;
+}
 
 // generates a 6-character long string of numbers and letters
 function generateRandomString() {
@@ -100,24 +122,34 @@ app.post("/login", (req, res) => {
 
 app.post("/logout", (req, res) => {
   res.clearCookie('user_id');
-  res.redirect("/urls");
+  res.redirect("/login");
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const shortURL = req.params.shortURL;
-  delete urlDatabase[shortURL];
-  res.redirect("/urls");
+  console.log(req.cookies.user_id);
+  if (!req.cookies.user_id) { // is cookie the only check we need?
+    res.statusCode = 401;
+    res.send("You can't delete that. You're not logged in as the correct user.\n");
+  } else {
+    const shortURL = req.params.shortURL;
+    delete urlDatabase[shortURL];
+    res.redirect("/urls");
+  }  
 });
 
-app.post("/urls/:shortURL/edit", (req, res) => { // can get Express routing syntax highlighter
-  urlDatabase[req.body.shortURL] = req.body.newLongURL;
-  res.redirect(`/urls/${req.params.shortURL}`);
+app.post("/urls/:shortURL/edit", (req, res) => {
+  if (!req.cookies.user_id) { // is cookie the only check we need?
+    res.statusCode = 401;
+    res.send("You can't edit that. You're not logged in as the correct user.\n");
+  } else {
+    urlDatabase[req.body.shortURL].longURL = req.body.newLongURL;
+    res.redirect(`/urls/${req.params.shortURL}`);
+  }
 });
 
-app.post("/urls", (req, res) => {  
-  let { longURL } = req.body;
-  let shortURL = generateRandomString();                   
-  urlDatabase[shortURL] = longURL; // note this is not putting "" around keys
+app.post("/urls", (req, res) => {
+  let shortURL = generateRandomString();
+  urlDatabase[shortURL] = { "longURL": req.body.longURL, "userID": req.cookies.user_id }; // note this is not putting "" around keys
   res.redirect(`/urls/${shortURL}`);
 });
 
@@ -173,34 +205,43 @@ app.get("/urls.json", (req, res) => {
 
 
 app.get("/urls", (req, res) => {
+  const user = users[req.cookies.user_id];
   const templateVars = {
-    urls: urlDatabase,
-    user: users[req.cookies.user_id]
+    urls: urlsForUser(user.id),
+    user: user
   };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
+  if (!req.cookies.user_id) { // should this be broken out to 'logginIn' function? what would i need to pass it?
+    return res.redirect("/urls"); // this link shouldn't show if i'm not logged in
+  }
+  
   const templateVars = {
     urls: urlDatabase,
     user: users[req.cookies.user_id]
   };
   res.render("urls_new", templateVars);
 });
-
+  // how does this get request happen? from the <a> in the site OR from ...where else?
   app.get("/u/:shortURL", (req, res) => {
+    // if incoming url is not valid, respond with url you entered is not valid
+    // this is where you can fix their url to make sure it's http://
     const templateVars = {
       urls: urlDatabase,
       user: users[req.cookies.user_id]
     };
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
+  // put if statement to take off http:// or https://
   res.redirect(`${longURL}`);
 });
 
 // need to check that :id exists before the redirect
 app.get("/urls/:id", (req, res) => { // can get Express routing syntax highlighter
+  
   const templateVars = {
-    longURL: urlDatabase[req.params.id],
+    longURL: urlDatabase[req.params.id].longURL,
     shortURL: req.params.id,
     user: users[req.cookies.user_id]
   };
