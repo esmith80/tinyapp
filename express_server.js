@@ -6,14 +6,7 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const PORT = 8080; // default port 8080
 
-function generateRandomString() {
-  randomString = "";
-  characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for(let i = 0; i < 6; i++) {
-    randomString += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return randomString;
-}
+//--------DATA-----------
 
 const users = { 
   "userRandomID": {
@@ -33,16 +26,38 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+//----------Helper Functions-----------
+
+// generates a 6-character long string of numbers and letters
+function generateRandomString() {
+  randomString = "";
+  characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  for(let i = 0; i < 6; i++) {
+    randomString += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return randomString;
+}
+// returns true if email exists in user database
+function emailExists(email) {
+  for (const userID in users) {
+    if (users[userID].email === email) {
+      return true;
+    }
+  }
+  return false;
+}
+
+//-----------MIDDLEWARE CONFIGURATION ---------
+
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
 app.set('view engine', 'ejs');
-
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
-// --------- POST Request Handlers ---------
+//--------- POST Request Handlers ---------
 
 app.post("/login", (req, res) => {
   res.cookie('username', req.body.username);
@@ -50,7 +65,7 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie('username');
+  res.clearCookie('user_id');
   res.redirect("/urls");
 });
 
@@ -73,16 +88,26 @@ app.post("/urls", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  if (!email || !password) {
+     res.statusCode = 400;
+     return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`);
+  }
+  if (emailExists(email)) {
+     return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`); 
+    }
+
   const userID = generateRandomString();
   const user = {
     id:       userID,
-    email:    req.body.email,
-    password: req.body.password
+    email:    email,
+    password: password
   }
   users[userID] = user;
   res.cookie('user_id', userID);
   res.redirect("/urls");
-  console.log(users);
 });
 
 // --------- GET Request Handlers ---------
@@ -90,7 +115,7 @@ app.post("/register", (req, res) => {
 app.get("/register", (req, res) => {
   const templateVars = {
     urls: urlDatabase,
-    username: req.cookies["username"]
+    user: users[req.cookies.user_id]
   };
   res.render('register', templateVars);
 });
@@ -104,11 +129,11 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-//http://localhost:8080/urls
+
 app.get("/urls", (req, res) => {
   const templateVars = {
     urls: urlDatabase,
-    username: req.cookies["username"]
+    user: users[req.cookies.user_id]
   };
   res.render("urls_index", templateVars);
 });
@@ -116,7 +141,7 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   const templateVars = {
     urls: urlDatabase,
-    username: req.cookies["username"]
+    user: users[req.cookies.user_id]
   };
   res.render("urls_new", templateVars);
 });
@@ -124,18 +149,18 @@ app.get("/urls/new", (req, res) => {
   app.get("/u/:shortURL", (req, res) => {
     const templateVars = {
       urls: urlDatabase,
-      username: req.cookies["username"]
+      user: users[req.cookies.user_id]
     };
   const longURL = urlDatabase[req.params.shortURL];
-  res.redirect(302, `${longURL}`);
+  res.redirect(`${longURL}`);
 });  
 
 
 app.get("/urls/:id", (req, res) => { // can get Express routing syntax highlighter
   const templateVars = {
-    shortURL: req.params.id,
     longURL: urlDatabase[req.params.id],
-    username: req.cookies["username"]
+    shortURL: req.params.id,
+    user: users[req.cookies.user_id]
   };
   res.render("urls_show", templateVars);
 });
