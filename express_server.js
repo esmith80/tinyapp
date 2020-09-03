@@ -47,6 +47,25 @@ function emailExists(email) {
   return false;
 }
 
+// returns true if email and password equal a single user's email and password properties
+function passwordCorrect(email, password) {
+  for (const userID in users) {
+    if ((users[userID].email === email) && (users[userID].password === password)) {
+        return true;
+      }
+    }
+  return false;
+  }
+
+// returns id for a user who exists in system, null if user does not exist
+function getUserID(email) {
+  for (const userID in users) {
+    if (users[userID].email === email) { 
+        return userID;
+      }
+    }
+  return null;
+  }  
 //-----------MIDDLEWARE CONFIGURATION ---------
 
 app.use(cookieParser());
@@ -60,8 +79,23 @@ app.listen(PORT, () => {
 //--------- POST Request Handlers ---------
 
 app.post("/login", (req, res) => {
-  res.cookie('username', req.body.username);
-  res.redirect("/urls");
+  const email = req.body.email;
+  const password = req.body.password;
+
+  if (!email || !password) {
+     res.statusCode = 403;
+     return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`);
+  }
+  if (!emailExists(email)) {
+    res.statusCode = 403;
+    return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`); 
+  } else if (!passwordCorrect(email, password)) {
+    res.statusCode = 403;
+    return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`);
+  } else {
+    res.cookie('user_id', getUserID(email));
+    res.redirect("/urls");
+  }
 });
 
 app.post("/logout", (req, res) => {
@@ -92,13 +126,13 @@ app.post("/register", (req, res) => {
   const password = req.body.password;
 
   if (!email || !password) {
-     res.statusCode = 400;
-     return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`);
+    res.statusCode = 400;
+    return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`);
   }
   if (emailExists(email)) {
-     return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`); 
-    }
-
+    res.statusCode = 400;
+    return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`); 
+  }
   const userID = generateRandomString();
   const user = {
     id:       userID,
@@ -111,6 +145,14 @@ app.post("/register", (req, res) => {
 });
 
 // --------- GET Request Handlers ---------
+
+app.get("/login", (req, res) => {
+  const templateVars = {
+    urls: urlDatabase,
+    user: users[req.cookies.user_id]
+  };
+  res.render('login', templateVars);
+});
 
 app.get("/register", (req, res) => {
   const templateVars = {
@@ -153,8 +195,7 @@ app.get("/urls/new", (req, res) => {
     };
   const longURL = urlDatabase[req.params.shortURL];
   res.redirect(`${longURL}`);
-});  
-
+});
 
 app.get("/urls/:id", (req, res) => { // can get Express routing syntax highlighter
   const templateVars = {
