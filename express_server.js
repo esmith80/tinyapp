@@ -197,6 +197,7 @@ app.get("/urls/new", (req, res) => {
   res.redirect(`${longURL}`);
 });
 
+// need to check that :id exists before the redirect
 app.get("/urls/:id", (req, res) => { // can get Express routing syntax highlighter
   const templateVars = {
     longURL: urlDatabase[req.params.id],
