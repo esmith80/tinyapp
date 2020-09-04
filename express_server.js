@@ -2,28 +2,13 @@ const express = require("express");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcrypt');
 const app = express();
 const PORT = 8080; // default port 8080
 
 //--------DATA-----------
 
-const users = { 
-  "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
-  },
- "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
-    password: "dishwasher-funk"
-  },
-  "a": {
-    id: "a", 
-    email: "a@a.com", 
-    password: "a"
-  }
-}
+const users = {};
 
 const urlDatabase = {
   "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "userRandomID" },
@@ -70,13 +55,11 @@ function emailExists(email) {
 }
 
 // returns true if email and password equal a single user's email and password properties
-function passwordCorrect(email, password) {
-  for (const userID in users) {
-    if ((users[userID].email === email) && (users[userID].password === password)) {
+function passwordCorrect(userID, password) {
+    if (bcrypt.compareSync(password, users[userID].password)) {
         return true;
       }
-    }
-  return false;
+    return false;
   }
 
 // returns id for a user who exists in system, null if user does not exist
@@ -98,12 +81,18 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
+//----------TEST CONSOLE LOGS--------
+setInterval( () => {
+  console.table(users);
+}, 60000);
+
+
 //--------- POST Request Handlers ---------
 
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-
+  
   if (!email || !password) {
      res.statusCode = 403;
      return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`);
@@ -111,7 +100,7 @@ app.post("/login", (req, res) => {
   if (!emailExists(email)) {
     res.statusCode = 403;
     return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`); 
-  } else if (!passwordCorrect(email, password)) {
+  } else if (!passwordCorrect(getUserID(email), password)) {
     res.statusCode = 403;
     return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`);
   } else {
@@ -155,7 +144,8 @@ app.post("/urls", (req, res) => {
 
 app.post("/register", (req, res) => {
   const email = req.body.email;
-  const password = req.body.password;
+  const password = bcrypt.hashSync(req.body.password, 10);
+  console.log(req.body.password);
 
   if (!email || !password) {
     res.statusCode = 400;
