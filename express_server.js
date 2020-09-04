@@ -1,7 +1,7 @@
 const express = require("express");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const bcrypt = require('bcrypt');
 const app = express();
 const PORT = 8080; // default port 8080
@@ -73,7 +73,10 @@ function getUserID(email) {
   }  
 //-----------MIDDLEWARE CONFIGURATION ---------
 
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1'],
+}));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
 app.set('view engine', 'ejs');
@@ -104,19 +107,19 @@ app.post("/login", (req, res) => {
     res.statusCode = 403;
     return res.send(`${res.statusCode}: Bad Request (i.e. your fault) - There was a problem with your email or password`);
   } else {
-    res.cookie('user_id', getUserID(email));
+    req.session.user_id = getUserID(email);
+
     res.redirect("/urls");
   }
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id');
+  req.session = null;
   res.redirect("/login");
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  console.log(req.cookies.user_id);
-  if (!req.cookies.user_id) { // is cookie the only check we need?
+  if (!req.session.user_id) { // is cookie the only check we need?
     res.statusCode = 401;
     res.send("You can't delete that. You're not logged in as the correct user.\n");
   } else {
@@ -127,7 +130,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/urls/:shortURL/edit", (req, res) => {
-  if (!req.cookies.user_id) { // is cookie the only check we need?
+  if (!req.session.user_id) { // is cookie the only check we need?
     res.statusCode = 401;
     res.send("You can't edit that. You're not logged in as the correct user.\n");
   } else {
@@ -138,7 +141,7 @@ app.post("/urls/:shortURL/edit", (req, res) => {
 
 app.post("/urls", (req, res) => {
   let shortURL = generateRandomString();
-  urlDatabase[shortURL] = { "longURL": req.body.longURL, "userID": req.cookies.user_id }; // note this is not putting "" around keys
+  urlDatabase[shortURL] = { "longURL": req.body.longURL, "userID": req.session.user_id }; // note this is not putting "" around keys
   res.redirect(`/urls/${shortURL}`);
 });
 
@@ -162,7 +165,7 @@ app.post("/register", (req, res) => {
     password: password
   }
   users[userID] = user;
-  res.cookie('user_id', userID);
+  req.session.user_id = userID;
   res.redirect("/urls");
 });
 
@@ -171,7 +174,7 @@ app.post("/register", (req, res) => {
 app.get("/login", (req, res) => {
   const templateVars = {
     urls: urlDatabase,
-    user: users[req.cookies.user_id]
+    user: users[req.session.user_id]
   };
   res.render('login', templateVars);
 });
@@ -179,7 +182,7 @@ app.get("/login", (req, res) => {
 app.get("/register", (req, res) => {
   const templateVars = {
     urls: urlDatabase,
-    user: users[req.cookies.user_id]
+    user: users[req.session.user_id]
   };
   res.render('register', templateVars);
 });
@@ -195,22 +198,22 @@ app.get("/urls.json", (req, res) => {
 
 
 app.get("/urls", (req, res) => {
-  const user = users[req.cookies.user_id];
+  const user = users[req.session.user_id];
   const templateVars = {
-    urls: urlsForUser(user.id),
+    urls: urlsForUser(req.session.user_id),
     user: user
   };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  if (!req.cookies.user_id) { // should this be broken out to 'logginIn' function? what would i need to pass it?
+  if (!req.session.user_id) { // should this be broken out to 'logginIn' function? what would i need to pass it?
     return res.redirect("/urls"); // this link shouldn't show if i'm not logged in
   }
   
   const templateVars = {
     urls: urlDatabase,
-    user: users[req.cookies.user_id]
+    user: users[req.session.user_id]
   };
   res.render("urls_new", templateVars);
 });
@@ -220,7 +223,7 @@ app.get("/urls/new", (req, res) => {
     // this is where you can fix their url to make sure it's http://
     const templateVars = {
       urls: urlDatabase,
-      user: users[req.cookies.user_id]
+      user: users[req.session.user_id]
     };
   const longURL = urlDatabase[req.params.shortURL].longURL;
   // put if statement to take off http:// or https://
@@ -233,7 +236,7 @@ app.get("/urls/:id", (req, res) => { // can get Express routing syntax highlight
   const templateVars = {
     longURL: urlDatabase[req.params.id].longURL,
     shortURL: req.params.id,
-    user: users[req.cookies.user_id]
+    user: users[req.session.user_id]
   };
   res.render("urls_show", templateVars);
 });
