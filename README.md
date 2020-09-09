@@ -14,5 +14,9 @@ The goal of further development is to move toward a one-page solution. Below is 
 - controls on the urls listing page which will allow:
   - in-page editing of a url (this will replace the 'Edit' page)
   - creation of a new url (this will replace the 'Create' page)
+- friendlier error messages after unsuccessful login/registration attempt
+- share button to share the url to popular social media channels
+- works on mobile and desktop
+- on logout display goodbye message and then setTimeout to refresh to login screen
 
 

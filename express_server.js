@@ -6,6 +6,7 @@ const morgan = require("morgan");
 const bodyParser = require("body-parser");
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcrypt');
+const { urlDatabase, urlIsAllowed } = require("./helpers");
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -143,18 +144,27 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  // feature request to fix their url to make sure it's http://
-  const longURL = hp.urlDatabase[req.params.shortURL].longURL;
-  res.redirect(`${longURL}`);
+  
+    const longURL = hp.urlDatabase[req.params.shortURL].longURL;
+    res.redirect(`${longURL}`);
+  
 });
 
 app.get("/urls/:id", (req, res) => {
-  const templateVars = {
-    longURL: hp.urlDatabase[req.params.id].longURL,
-    shortURL: req.params.id,
-    user: hp.users[req.session.user_id]
-  };
-  res.render("urls_show", templateVars);
+  if (!req.session.user_id) {
+    res.statusCode = 401;
+    res.send("You can't access that url. You're not logged in as the correct user.\n");
+  } else if (!(hp.urlIsAllowed(req.params.id, req.session.user_id))) {
+    res.statusCode = 401;
+    res.send("You can't access that url. You're not logged in as the correct user.\n");
+  } else {  
+    const templateVars = {
+      longURL: hp.urlDatabase[req.params.id].longURL,
+      shortURL: req.params.id,
+      user: hp.users[req.session.user_id]
+    };
+    res.render("urls_show", templateVars);
+  }
 });
 
 //--LISTEN--

@@ -51,6 +51,17 @@ function urlsForUser(id) {
   return filteredUrls;
 }
 
+// given a short url and user id, returns a boolean to indicate if user is allowed to access that URL's Edit page
+function urlIsAllowed(shortURL, id) {
+  const authorizedUrls = urlsForUser(id);
+  for (const url of authorizedUrls) {
+    if (shortURL === url.shortCut) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // generates a 6-character long string of numbers and letters
 function generateRandomString() {
   randomString = "";
@@ -79,4 +90,4 @@ function passwordCorrect(userID, password) {
     return false;
   }
 
-module.exports = { getUserByEmail, generateRandomString, urlsForUser, passwordCorrect, emailExists, users, urlDatabase }
+module.exports = { getUserByEmail, generateRandomString, urlsForUser, passwordCorrect, emailExists, urlIsAllowed, users, urlDatabase }
